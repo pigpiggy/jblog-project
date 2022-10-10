@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="blog">
+
+	<select id="getById" resultType="blogvo" parameterType="string">
+	<![CDATA[
+		SELECT b.userNo, b.blogTitle, b.logoFile  
+		FROM users u, blog b 
+		WHERE u.userNo = b.userNo and id=#{id}
+	]]>
+	</select>
+	
+	<select id="getByUserNo" resultType="blogvo" parameterType="long">
+	<![CDATA[
+		SELECT b.userNo, b.blogTitle, b.logoFile  
+		FROM users u, blog b 
+		WHERE u.userNo = b.userNo and id=#{id}
+	]]>
+	</select>
+	
+	<update id="modify" parameterType="blogvo">
+		update blog set blogTitle = #{blogTitle}, logoFile = #{logoFile} where userNo = #{userNo}
+	</update>
+	
+	<select id="CateListMain" resultType="categoryvo" parameterType="Long">
+	<![CDATA[
+		SELECT cateNo, cateName
+		FROM category 
+		WHERE userNo = #{userNo} order by cateNo
+	]]>
+	</select>
+	
+	<select id="PostListMain" resultType="postvo" parameterType="int">
+	<![CDATA[
+		SELECT postNo, cateNo, postTitle, postContent, to_char(regDate, 'YYYY/MM/DD') as regDate
+		FROM post 
+		WHERE cateNo = #{cateNo}
+		order by postNo desc
+	]]>
+	</select>
+	
+	<select id="getdefaultpost" resultType="postvo" parameterType="Long">
+	<![CDATA[
+		SELECT postNo, p.cateNo, postTitle, postContent, to_char(p.regDate, 'YYYY/MM/DD') as regDate
+		FROM category c, post p
+		WHERE c.cateNo = p.cateNo 
+		and c.userNo = #{userNo}
+		and c.cateNo = (select min(cateNo) from category
+						where userNo=#{userNo})
+		order by postNo desc
+	]]>
+	</select>
+	
+	<select id="getPostView" resultType="postvo" parameterType="int">
+	<![CDATA[
+		SELECT postTitle, postContent
+		FROM post 
+		WHERE postNo = #{postNo}
+	]]>
+	</select>
+	
+	<select id="getdePostContent" resultType="postvo" parameterType="Long">
+	<![CDATA[
+		SELECT postTitle, postContent
+		FROM post  
+		WHERE postNo = (select max(postNo)
+						from post p, category c
+						where p.cateNo = c.cateNo
+						and c.cateNo = (select min(cateNo) 
+										from category
+										where userNo=#{userNo}))
+	]]>
+	</select>
+	
+	<select id="getUserNo" resultType="Long" parameterType="String">
+	<![CDATA[
+		SELECT userNo
+		FROM users 
+		WHERE id = #{userid}
+	]]>
+	</select>
+	
+	<select id="getReply" resultType="commentsvo" parameterType="Long">
+	<![CDATA[
+		SELECT cmtNo, postNo, userNo, cmtContent, to_char(regDate, 'YYYY/MM/DD') as regDate, coName
+		FROM comments 
+		WHERE postNo = (select max(postNo) from category c, post p
+						where c.cateNo = p.cateNo
+						and c.cateNo = (select min(cateNo) 
+										from category 
+										where userNo = #{userNo}))
+		order by cmtNo desc								
+	]]>
+	</select>
+	
+	<select id="getCommentsList" resultType="commentsvo" parameterType="int">
+	<![CDATA[
+		SELECT cmtNo, postNo, userNo, cmtContent, to_char(regDate, 'YYYY/MM/DD') as regDate, coName
+		FROM comments
+		WHERE postNo = #{postNo} order by cmtNo desc
+	]]>
+	</select>
+	
+   <insert id="addReply" parameterType="commentsvo">
+   <selectKey keyProperty="cmtNo" resultType="int" order="BEFORE"><!-- 본 쿼리가 먼저 실행 -->
+   <![CDATA[
+      SELECT seq_comments_no.nextval from dual
+   ]]>
+   </selectKey>
+   <![CDATA[
+       insert into comments 
+       values(#{cmtNo}, #{postNo}, #{userNo}, #{cmtContent}, sysdate, #{coName})
+   ]]>
+   </insert>
+	
+	<select id="firstReply" resultType="commentsvo">
+	<![CDATA[
+		SELECT cmtNo, postNo, userNo, cmtContent, to_char(regDate, 'YYYY/MM/DD') as regDate, coName
+		FROM comments
+		WHERE cmtNo=(select max(cmtNo) from comments)
+	]]>
+	</select>
+	
+	 <!-- 댓글 삭제 -->
+   <delete id="deleteReply" parameterType="commentsvo">
+      <![CDATA[            
+         DELETE FROM comments WHERE cmtNo =#{cmtNo}
+      ]]>
+   </delete>
+   
+   <select id="deleteReplyList" resultType="commentsvo" parameterType="commentsvo">
+	<![CDATA[
+		SELECT cmtNo, postNo, userNo, cmtContent, to_char(regDate, 'YYYY/MM/DD') as regDate, coName
+		FROM comments
+		WHERE postNo = #{postNo} order by cmtNo desc
+	]]>
+	</select>
+   
+	
+</mapper>

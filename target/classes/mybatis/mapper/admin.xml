@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="admin">
+
+	<select id="getById" resultType="blogvo" parameterType="string">
+	<![CDATA[
+		SELECT b.userNo, b.blogTitle, b.logoFile  
+		FROM users u, blog b 
+		WHERE u.userNo = b.userNo and id=#{id}
+	]]>
+	</select>
+	
+	<update id="modify" parameterType="blogvo">
+		<![CDATA[
+		update blog set blogTitle = #{blogTitle}
+		]]>
+
+		<if test='!logoFile.equals("")'>
+		<![CDATA[
+		 , logoFile = #{logoFile}
+		]]>
+		</if>
+
+		<![CDATA[
+		where userNo = #{userNo}
+		]]>
+		
+	</update>
+	
+	<!-- 카테고리 리스트 출력-->
+   <select id="getList" resultType="categoryvo" parameterType="Long">
+      <![CDATA[
+         SELECT rownum AS rnum, j.*
+            FROM (SELECT c.CATENO as cateNo, c.CATENAME as cateName , c.DESCRIPTION as description , count(p.POSTTITLE) AS countPost
+                 FROM CATEGORY c LEFT OUTER join POST p 
+                 ON c.cateNo=p.cateNo
+                 WHERE userNo = #{userNo}
+                 GROUP BY c.cateNo, c.CATENAME , c.DESCRIPTION ) j
+            ORDER BY rownum DESC
+      ]]>
+   </select>
+
+   <!-- 카테고리 삭제 -->
+   <delete id="delete" parameterType="categoryvo">
+      <![CDATA[            
+         DELETE FROM CATEGORY WHERE CATENO =#{cateNo}
+      ]]>
+   </delete>
+	
+	<!-- 카테고리 추가 -->
+	<insert id="insertcate" parameterType="categoryvo">
+   <selectKey keyProperty="cateNo" resultType="int" order="BEFORE"><!-- 본 쿼리가 먼저 실행 -->
+   <![CDATA[
+      SELECT seq_category_no.nextval from dual
+   ]]>
+   </selectKey>
+   <![CDATA[
+       insert into category 
+       values(#{cateNo}, #{userNo}, #{cateName}, #{description}, sysdate)
+   ]]>
+   </insert>
+   
+   <select id="selectcate" resultType="categoryvo"> <!-- #{ } 이렇게 변수를 가져 오는데 이건 가져오는 게 아니니까 parameterType필요없 -->
+   <![CDATA[
+		select * from category 
+		where cateNo = (select max(cateNo) from category)	
+   ]]>
+   </select>
+   
+   <!-- 포스트 추가에 필요한 카테고리 넘버와 네임 -->
+   
+    <select id="cateNoName" resultType="categoryvo"> 
+       <![CDATA[
+		select cateNo,cateName 
+		from category 
+		where userNo = #{userNo}	
+   ]]>
+   </select>
+   
+   
+   <!-- 포스트 추가 -->
+	<insert id="insertpost" parameterType="postvo">
+   <selectKey keyProperty="postNo" resultType="int" order="BEFORE"><!-- 본 쿼리가 먼저 실행 -->
+   <![CDATA[
+      SELECT seq_post_no.nextval from dual
+   ]]>
+   </selectKey>
+   <![CDATA[
+       insert into post 
+       values(#{postNo}, #{cateNo}, #{postTitle}, #{postContent}, sysdate)
+   ]]>
+   </insert>
+   
+		
+</mapper>
